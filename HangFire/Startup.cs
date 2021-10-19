@@ -1,3 +1,6 @@
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,6 +30,16 @@ namespace HangFire
         public void ConfigureServices(IServiceCollection services)
         {
 
+            // Add Hangfire services.
+            services.AddHangfire(configuration => configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseMemoryStorage());
+
+            // Add the processing server as IHostedService
+            services.AddHangfireServer();
+
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
@@ -35,7 +48,7 @@ namespace HangFire
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IBackgroundJobClient backgroundJobs, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -43,6 +56,9 @@ namespace HangFire
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "HangFire v1"));
             }
+
+            app.UseHangfireDashboard();
+            backgroundJobs.Enqueue(() => Console.WriteLine("Hello world from Hangfire!"));
 
             app.UseHttpsRedirection();
 
